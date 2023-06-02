@@ -9,9 +9,18 @@ from flask_cors import CORS
 from utils import APIException, generate_sitemap
 from admin import setup_admin
 from models import db, Usuario, Personas,Planetas,Favoritos_personas,Favoritos_planetas,Favoritos_vehiculos #aqui exportar los modelos.
+from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, JWTManager
+from flask_bcrypt import Bcrypt
 
 app = Flask(__name__)
 app.url_map.strict_slashes = False
+
+app.config["JWT_SECRET_KEY"] = "hola-amigos"  # Change this!
+jwt = JWTManager(app)
+
+bcrypt = Bcrypt(app)
+
+
 
 db_url = os.getenv("DATABASE_URL")
 if db_url is not None:
@@ -35,8 +44,91 @@ def handle_invalid_usage(error):
 def sitemap():
     return generate_sitemap(app)
 
-#empieza aqui los ENDPOINTs
+#empiezan los ENDPOINTs de acceso
 
+@app.route('/signup', methods=['POST'])
+def signup():
+
+    nombre = request.json.get("nombre", None)
+    apellido = request.json.get("apellido", None)
+    email = request.json.get("email", None)
+    password = request.json.get("password", None)
+
+    response_body = {}
+
+    if nombre is None:
+        response_body["msg"] = "Falta el nombre"
+        return jsonify(response_body), 400
+    
+    if apellido is None:
+        response_body["msg"] = "Falta el apellido"
+        return jsonify(response_body), 400
+    
+    if email is None:
+        response_body["msg"] = "Falta el email"
+        return jsonify(response_body), 400
+
+    usuario = Usuario.query.filter_by(email=email).first()
+   
+    if usuario != None: 
+         response_body["msg"] = "Existe un usuario con este email"
+         return jsonify(response_body), 401
+ 
+    
+    if password is None:
+        response_body["msg"] = "Falta el password"
+        return jsonify(response_body), 400
+
+    pw_hash = bcrypt.generate_password_hash("password").decode("utf-8")
+
+    print (pw_hash)
+    print(password)
+
+    
+    crear_usuario_codificado = Usuario(nombre=nombre, apellido=apellido, email=email, password=pw_hash)
+
+
+    db.session.add(crear_usuario_codificado)
+    db.session.commit()
+    
+    response_body["msg"] = "Usuario creado"
+
+    return jsonify(response_body), 200 
+
+
+@app.route("/login", methods=["POST"])
+def login():
+
+    email = request.json.get("email", None)
+    password = request.json.get("password", None)
+    response_body={}
+
+    if email is None:
+        response_body["msg"] = "Falta el email"
+        return jsonify(response_body), 400
+
+    usuario = Usuario.query.filter_by(email=email).first()
+   
+    if usuario != None: 
+         response_body["msg"] = "Falta el password"
+         return jsonify(response_body), 401
+    
+    if email is None:
+        response_body["msg"] = "Falta el email"
+        return jsonify(response_body), 400
+
+    # usuario = Usuario.query.filter_by(password=password).first()
+   
+    # if usuario != None: 
+    #      response_body["msg"] = "Falta el usuario y password"
+    #      return jsonify(response_body), 401
+
+    access_token = create_access_token(identity=usuario)
+    return jsonify(access_token=access_token)
+
+
+
+#empieza aqui los ENDPOINTs
 
 # EndPoint para listar todos los registros de personas de la base de datos.
 @app.route('/persona', methods=['GET'])
