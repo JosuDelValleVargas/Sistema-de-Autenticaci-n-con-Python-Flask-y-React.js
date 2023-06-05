@@ -103,29 +103,23 @@ def login():
     password = request.json.get("password", None)
     response_body={}
 
-    if email is None:
-        response_body["msg"] = "Falta el email"
-        return jsonify(response_body), 400
-
-    usuario = Usuario.query.filter_by(email=email).first()
-   
-    if usuario != None: 
-         response_body["msg"] = "Falta el password"
-         return jsonify(response_body), 401
     
-    if email is None:
+
+    usuario = Usuario.query.filter_by(email=email).first() 
+
+    if usuario is None:
         response_body["msg"] = "Falta el email"
-        return jsonify(response_body), 400
+        return jsonify(response_body), 404
 
-    # usuario = Usuario.query.filter_by(password=password).first()
    
-    # if usuario != None: 
-    #      response_body["msg"] = "Falta el usuario y password"
-    #      return jsonify(response_body), 401
-
-    access_token = create_access_token(identity=usuario)
+    if password != usuario.password: 
+        
+        response_body["msg"] = "Incorrecto el password"
+        return jsonify(response_body), 401
+    
+    access_token = create_access_token(identity=usuario.id)
     return jsonify(access_token=access_token)
-
+    
 
 
 #empieza aqui los ENDPOINTs
