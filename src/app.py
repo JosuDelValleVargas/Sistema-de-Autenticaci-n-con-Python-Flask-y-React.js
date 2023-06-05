@@ -121,6 +121,19 @@ def login():
     return jsonify(access_token=access_token)
     
 
+@app.route("/private", methods=["GET"])
+@jwt_required()
+def private():
+
+    actual_usuario_id = get_jwt_identity()
+    
+    usuario = Usuario.query.get(actual_usuario_id)
+
+    return jsonify({"msg": f"estas logeado como {usuario.nombre}",
+                   "response": usuario.serialize()}),200
+    
+    response_body={}
+
 
 #empieza aqui los ENDPOINTs
 
